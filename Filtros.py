@@ -17,41 +17,41 @@ if uploaded_file:
 
         # --- Filtros ---
         st.sidebar.header("Filtros")
-
-        entidad_opciones = st.sidebar.multiselect(
+        
+        entidad_opcion = st.sidebar.selectbox(
             "Selecciona Entidad",
-            options=sorted(df["Entidad"].dropna().unique())
+            options=["(Todos)"] + sorted(df["Entidad"].dropna().unique().tolist())
         )
-
-        modalidad_opciones = st.sidebar.multiselect(
+        
+        modalidad_opcion = st.sidebar.selectbox(
             "Selecciona Modalidad",
-            options=sorted(df["Modalidad"].dropna().unique())
+            options=["(Todos)"] + sorted(df["Modalidad"].dropna().unique().tolist())
         )
-
-        ciclo_opciones = st.sidebar.multiselect(
+        
+        ciclo_opcion = st.sidebar.selectbox(
             "Selecciona Ciclo",
-            options=sorted(df["Ciclo"].dropna().unique())
+            options=["(Todos)"] + sorted(df["Ciclo"].dropna().unique().tolist())
         )
-
-        cultivo_opciones = st.sidebar.multiselect(
+        
+        cultivo_opcion = st.sidebar.selectbox(
             "Selecciona Cultivo",
-            options=sorted(df["Cultivo"].dropna().unique())
+            options=["(Todos)"] + sorted(df["Cultivo"].dropna().unique().tolist())
         )
-
+        
         # --- Aplicar filtros ---
         df_filtrado = df.copy()
-
-        if entidad_opciones:
-            df_filtrado = df_filtrado[df_filtrado["Entidad"].isin(entidad_opciones)]
-
-        if modalidad_opciones:
-            df_filtrado = df_filtrado[df_filtrado["Modalidad"].isin(modalidad_opciones)]
-
-        if ciclo_opciones:
-            df_filtrado = df_filtrado[df_filtrado["Ciclo"].isin(ciclo_opciones)]
-
-        if cultivo_opciones:
-            df_filtrado = df_filtrado[df_filtrado["Cultivo"].isin(cultivo_opciones)]
+        
+        if entidad_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Entidad"] == entidad_opcion]
+        
+        if modalidad_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Modalidad"] == modalidad_opcion]
+        
+        if ciclo_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Ciclo"] == ciclo_opcion]
+        
+        if cultivo_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Cultivo"] == cultivo_opcion]
 
         # --- Mostrar resultado ---
         st.write("### Resultado filtrado")

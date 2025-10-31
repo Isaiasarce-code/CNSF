@@ -154,7 +154,9 @@ if uploaded_file:
                 from openpyxl.chart.label import DataLabelList
                 chart1.dataLabels = DataLabelList()
                 chart1.dataLabels.showVal = True
+                chart1.dataLabels.showCatName = False  
                 chart1.dataLabels.numberFormat = "0.00%"
+
                 
                 # Cambiar color de la línea (accediendo a la serie)
                 if chart1.series:

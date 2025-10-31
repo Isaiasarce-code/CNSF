@@ -121,20 +121,23 @@ if uploaded_file:
             ws = wb["Resumen Tarifa2"]
 
             # --- Gráfico 1: Promedio general ---
-            # --- Gráfico 1: Promedio general ---
+            # --- Gráfico 1: Promedio por Año ---
             if "Año" in df_filtrado.columns:
                 df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
-                df_por_anio["Tarifa2"] = df_por_anio["Tarifa2"] * 100  # Convertir a porcentaje
+                df_por_anio["Tarifa2"] = df_por_anio["Tarifa2"] * 100
+                df_por_anio.columns = ["Año", "Valor Promedio"]
                 chart_data_row = startrow + len(resumen_por_esquema) + 2
                 for r in dataframe_to_rows(df_por_anio, index=False, header=True):
                     ws.append(r)
             
                 chart1 = LineChart()
                 chart1.title = "Promedio por Año"
-                chart1.style = 10
+                chart1.style = 2
                 chart1.y_axis.title = "Valor Promedio"
                 chart1.x_axis.title = "Año"
                 chart1.marker = True
+                chart1.legend = None
+                chart1.graphicalProperties.line.solidFill = "0070C0"
             
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
@@ -142,7 +145,6 @@ if uploaded_file:
                 chart1.add_data(data_ref, titles_from_data=True)
                 chart1.set_categories(cats_ref)
             
-                # Mostrar etiquetas como porcentaje
                 from openpyxl.chart.label import DataLabelList
                 chart1.dataLabels = DataLabelList()
                 chart1.dataLabels.showVal = True

@@ -109,73 +109,57 @@ if uploaded_file:
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_filtrado.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+
+                # Escribimos las tablas
                 resumen_general.to_excel(writer, index=False, sheet_name='Resumen Tarifa2', startrow=0)
                 startrow = len(resumen_general) + 3
                 resumen_por_esquema.to_excel(writer, index=False, sheet_name='Resumen Tarifa2', startrow=startrow)
-        
+
+            # Cargar libro para añadir gráficos
             output.seek(0)
             wb = load_workbook(output)
             ws = wb["Resumen Tarifa2"]
-        
-            # --- Gráfico 1: Promedio por Año ---
+
+            # --- Gráfico 1: Promedio general ---
             if "Año" in df_filtrado.columns:
                 df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
-                df_por_anio["Tarifa2"] = (df_por_anio["Tarifa2"] * 100).round(2)  # Convertir a porcentaje
-                df_por_anio.columns = ["Año", "Valor Promedio"]
                 chart_data_row = startrow + len(resumen_por_esquema) + 2
                 for r in dataframe_to_rows(df_por_anio, index=False, header=True):
                     ws.append(r)
-        
+
                 chart1 = LineChart()
                 chart1.title = "Promedio por Año"
-                chart1.style = 2
+                chart1.style = 10  # estilo predeterminado con líneas suaves
                 chart1.y_axis.title = "Valor Promedio"
                 chart1.x_axis.title = "Año"
-                chart1.legend = None
-        
+                chart1.marker = True  # para mostrar puntos en cada año
+
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
-        
-                chart1.add_data(data_ref, titles_from_data=False)
+                
+                chart1.add_data(data_ref, titles_from_data=True)
                 chart1.set_categories(cats_ref)
-                chart1.series[0].title = ""  # Eliminar "Series1"
-        
-                from openpyxl.chart.label import DataLabelList
-                chart1.dataLabels = DataLabelList()
-                chart1.dataLabels.showVal = True
-                chart1.dataLabels.showCatName = False
-                chart1.dataLabels.numberFormat = "0.00%"
-        
-                chart1.series[0].graphicalProperties.line.solidFill = "0070C0"
                 ws.add_chart(chart1, f"E{chart_data_row}")
-        
+
             # --- Gráfico 2: Promedio por Esquema ---
             if not resumen_por_esquema.empty:
                 chart2 = LineChart()
                 chart2.title = "Promedio Tarifa2 por Esquema de aseguramiento"
-                chart2.style = 10
+                chart2.style = 10  # estilo predeterminado con líneas suaves
                 chart2.y_axis.title = "Promedio"
                 chart2.x_axis.title = "Esquema"
-                chart2.legend = None
+                chart2.marker = True  # para mostrar puntos en cada año
         
                 data_ref2 = Reference(ws, min_col=2, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
                 cats_ref2 = Reference(ws, min_col=1, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
-        
                 chart2.add_data(data_ref2, titles_from_data=False)
                 chart2.set_categories(cats_ref2)
-                chart2.series[0].title = ""
-                chart2.dataLabels = DataLabelList()
-                chart2.dataLabels.showVal = True
-                chart2.dataLabels.showCatName = False
-                chart2.dataLabels.numberFormat = "0.00%"
-                chart2.series[0].graphicalProperties.line.solidFill = "0070C0"
-        
                 ws.add_chart(chart2, "E10")
-        
+
+            # Guardar
             new_output = BytesIO()
             wb.save(new_output)
             return new_output.getvalue()
-
 
         # --- Botón de descarga ---
         st.download_button(

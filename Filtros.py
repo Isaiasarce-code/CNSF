@@ -124,10 +124,6 @@ if uploaded_file:
             # Crear gráfico
 
 
-
-
-
-
             
             # --- Gráfico 1: Promedio por Año ---
             if "Año" in df_filtrado.columns:
@@ -156,8 +152,6 @@ if uploaded_file:
                 
                 # Etiquetas de datos como porcentaje
                 from openpyxl.chart.label import DataLabelList
-                chart1.dataLabels = DataLabelList()
-                chart1.dataLabels.showVal = True
                 chart1.dataLabels.numberFormat = "0.00%"
                 
                 # Cambiar color de la línea (accediendo a la serie)

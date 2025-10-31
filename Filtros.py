@@ -3,6 +3,7 @@ import pandas as pd
 from io import BytesIO
 from openpyxl import load_workbook
 from openpyxl.chart import LineChart, Reference
+from openpyxl.utils.dataframe import dataframe_to_rows 
 
 st.set_page_config(page_title="Filtro de Datos", layout="wide")
 

@@ -140,7 +140,7 @@ if uploaded_file:
                 chart1.style = 2
                 chart1.y_axis.title = "Valor Promedio"
                 chart1.x_axis.title = "Año"
-                chart1.marker = True
+                chart1.marker = None
                 chart1.legend = None
                 
                 # Referencias de datos
@@ -154,7 +154,7 @@ if uploaded_file:
                 # Etiquetas de datos como porcentaje
                 from openpyxl.chart.label import DataLabelList
                 chart1.dataLabels = DataLabelList()
-                chart1.dataLabels.showVal = False
+                chart1.dataLabels.showVal = True
                 chart1.dataLabels.showCatName = False  
                 chart1.dataLabels.numberFormat = "0.00%"
 

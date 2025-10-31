@@ -164,7 +164,7 @@ if uploaded_file:
                     chart1.series[0].graphicalProperties.line.solidFill = "0070C0"  # Azul estándar
                 
                 # Insertar gráfico
-                ws.add_chart(chart1, f"E{chart_data_row}")
+                ws.add_chart(f"E{chart_data_row}")
 
             # --- Gráfico 2: Promedio por Esquema ---
             if not resumen_por_esquema.empty:

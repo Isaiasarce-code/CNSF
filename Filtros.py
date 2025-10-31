@@ -19,27 +19,34 @@ if uploaded_file:
     if all(col in df.columns for col in columnas_requeridas):
 
         # --- Filtros ---
+
+        # --- Filtros dinámicos ---
         st.sidebar.header("Filtros")
         
-        entidad_opcion = st.sidebar.selectbox(
-            "Selecciona Entidad",
-            options=["(Todos)"] + sorted(df["Entidad"].dropna().unique().tolist())
-        )
+        # Filtro 1: Entidad
+        entidades_disponibles = sorted(df["Entidad"].dropna().unique().tolist())
+        entidad_opcion = st.sidebar.selectbox("Selecciona Entidad", ["(Todos)"] + entidades_disponibles)
         
-        modalidad_opcion = st.sidebar.selectbox(
-            "Selecciona Modalidad",
-            options=["(Todos)"] + sorted(df["Modalidad"].dropna().unique().tolist())
-        )
+        df_entidad = df if entidad_opcion == "(Todos)" else df[df["Entidad"] == entidad_opcion]
         
-        ciclo_opcion = st.sidebar.selectbox(
-            "Selecciona Ciclo",
-            options=["(Todos)"] + sorted(df["Ciclo"].dropna().unique().tolist())
-        )
+        # Filtro 2: Modalidad
+        modalidades_disponibles = sorted(df_entidad["Modalidad"].dropna().unique().tolist())
+        modalidad_opcion = st.sidebar.selectbox("Selecciona Modalidad", ["(Todos)"] + modalidades_disponibles)
         
-        cultivo_opcion = st.sidebar.selectbox(
-            "Selecciona Cultivo",
-            options=["(Todos)"] + sorted(df["Cultivo"].dropna().unique().tolist())
-        )
+        df_modalidad = df_entidad if modalidad_opcion == "(Todos)" else df_entidad[df_entidad["Modalidad"] == modalidad_opcion]
+        
+        # Filtro 3: Ciclo
+        ciclos_disponibles = sorted(df_modalidad["Ciclo"].dropna().unique().tolist())
+        ciclo_opcion = st.sidebar.selectbox("Selecciona Ciclo", ["(Todos)"] + ciclos_disponibles)
+        
+        df_ciclo = df_modalidad if ciclo_opcion == "(Todos)" else df_modalidad[df_modalidad["Ciclo"] == ciclo_opcion]
+        
+        # Filtro 4: Cultivo
+        cultivos_disponibles = sorted(df_ciclo["Cultivo"].dropna().unique().tolist())
+        cultivo_opcion = st.sidebar.selectbox("Selecciona Cultivo", ["(Todos)"] + cultivos_disponibles)
+        
+        # --- Aplicar filtros finales ---
+        df_filtrado = df_ciclo if cultivo_opcion == "(Todos)" else df_ciclo[df_ciclo["Cultivo"] == cultivo_opcion]
         
         # --- Aplicar filtros ---
         df_filtrado = df.copy()

@@ -146,9 +146,10 @@ if uploaded_file:
                 # Referencias de datos
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
-                
+
                 chart1.add_data(data_ref, titles_from_data=False)
                 chart1.set_categories(cats_ref)
+                chart1.series[0].title = None  # Eliminar el nombre de la serie
                 
                 # Etiquetas de datos como porcentaje
                 from openpyxl.chart.label import DataLabelList
@@ -157,9 +158,6 @@ if uploaded_file:
                 chart1.dataLabels.showCatName = False  
                 chart1.dataLabels.numberFormat = "0.00%"
 
-                chart1.add_data(data_ref, titles_from_data=False)
-                chart1.series[0].title = None  # Eliminar el nombre de la serie
-                chart1.set_categories(cats_ref)
             
                 # Cambiar color de la línea (accediendo a la serie)
                 if chart1.series:

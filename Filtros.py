@@ -57,16 +57,39 @@ if uploaded_file:
         st.write("### Resultado filtrado")
         st.dataframe(df_filtrado[columnas_requeridas], use_container_width=True)
 
-        # --- Botón para descargar resultado ---
-        def convertir_excel(df):
+        # --- Calcular estadísticas si existe la columna Tarifa2 ---
+        if "Tarifa2" in df_filtrado.columns and not df_filtrado["Tarifa2"].empty:
+            promedio = df_filtrado["Tarifa2"].mean()
+            desviacion = df_filtrado["Tarifa2"].std()
+            maximo = df_filtrado["Tarifa2"].max()
+
+            resumen = pd.DataFrame({
+                "Métrica": ["Promedio", "Desviación estándar", "Máximo"],
+                "Valor": [promedio, desviacion, maximo]
+            })
+
+            st.write("### 📈 Resumen estadístico (Tarifa2)")
+            st.dataframe(resumen, use_container_width=True)
+        else:
+            resumen = pd.DataFrame({
+                "Métrica": ["Promedio", "Desviación estándar", "Máximo"],
+                "Valor": ["N/A", "N/A", "N/A"]
+            })
+            st.warning("No se encontró la columna 'Tarifa2' o no tiene datos numéricos.")
+
+        # --- Función para crear el archivo Excel con dos hojas ---
+        def convertir_excel(df_filtrado, resumen):
             from io import BytesIO
             output = BytesIO()
-            df.to_excel(output, index=False, engine='openpyxl')
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_filtrado.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+                resumen.to_excel(writer, index=False, sheet_name='Resumen Tarifa2')
             return output.getvalue()
 
+        # --- Botón para descargar resultado ---
         st.download_button(
-            label="📥 Descargar resultado filtrado en Excel",
-            data=convertir_excel(df_filtrado[columnas_requeridas]),
+            label="📥 Descargar Excel con resultados",
+            data=convertir_excel(df_filtrado[columnas_requeridas + ['Tarifa2']] if 'Tarifa2' in df_filtrado.columns else df_filtrado[columnas_requeridas], resumen),
             file_name="resultado_filtrado.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )

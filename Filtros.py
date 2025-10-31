@@ -1,120 +1,164 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.chart import LineChart, Reference
+from openpyxl import load_workbook
+from openpyxl.chart import BarChart, Reference
 
-# =====================
-# FUNCIÓN PARA CREAR EL EXCEL
-# =====================
-def convertir_excel(df_filtrado, resumen_general, resumen_por_esquema):
-    output = BytesIO()
-    wb = Workbook()
+st.set_page_config(page_title="Filtro de Datos", layout="wide")
 
-    # --- Hoja 1: Datos filtrados
-    ws1 = wb.active
-    ws1.title = "Filtrado"
-    for r in dataframe_to_rows(df_filtrado, index=False, header=True):
-        ws1.append(r)
+st.title("📊 Filtro de tabla por banderas")
 
-    # --- Hoja 2: Resumen general
-    ws2 = wb.create_sheet("Resumen General")
-    for r in dataframe_to_rows(resumen_general, index=False, header=True):
-        ws2.append(r)
+# --- Cargar archivo Excel ---
+uploaded_file = st.file_uploader("Sube tu archivo Excel", type=["xlsx", "xls"])
 
-    # Crear gráfico de líneas en "Resumen General"
-    if not resumen_general.empty:
-        # Suponiendo que la primera columna es "Año" y la segunda es "Promedio"
-        chart = LineChart()
-        chart.title = "Promedio por Año"
-        chart.style = 10
-        chart.y_axis.title = "Valor Promedio"
-        chart.x_axis.title = "Año"
-        chart.marker = True
-        chart.smooth = True
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
 
-        # Datos para el gráfico
-        data = Reference(ws2, min_col=2, min_row=1, max_col=2, max_row=len(resumen_general) + 1)
-        cats = Reference(ws2, min_col=1, min_row=2, max_row=len(resumen_general) + 1)
-        chart.add_data(data, titles_from_data=True)
-        chart.set_categories(cats)
+    columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]
+    if all(col in df.columns for col in columnas_requeridas):
 
-        ws2.add_chart(chart, "E2")
+        # --- Filtros ---
+        st.sidebar.header("Filtros")
+        
+        entidad_opcion = st.sidebar.selectbox(
+            "Selecciona Entidad",
+            options=["(Todos)"] + sorted(df["Entidad"].dropna().unique().tolist())
+        )
+        
+        modalidad_opcion = st.sidebar.selectbox(
+            "Selecciona Modalidad",
+            options=["(Todos)"] + sorted(df["Modalidad"].dropna().unique().tolist())
+        )
+        
+        ciclo_opcion = st.sidebar.selectbox(
+            "Selecciona Ciclo",
+            options=["(Todos)"] + sorted(df["Ciclo"].dropna().unique().tolist())
+        )
+        
+        cultivo_opcion = st.sidebar.selectbox(
+            "Selecciona Cultivo",
+            options=["(Todos)"] + sorted(df["Cultivo"].dropna().unique().tolist())
+        )
+        
+        # --- Aplicar filtros ---
+        df_filtrado = df.copy()
+        
+        if entidad_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Entidad"] == entidad_opcion]
+        if modalidad_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Modalidad"] == modalidad_opcion]
+        if ciclo_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Ciclo"] == ciclo_opcion]
+        if cultivo_opcion != "(Todos)":
+            df_filtrado = df_filtrado[df_filtrado["Cultivo"] == cultivo_opcion]
 
-    # --- Hoja 3: Resumen por esquema
-    ws3 = wb.create_sheet("Resumen por Esquema")
-    for r in dataframe_to_rows(resumen_por_esquema, index=False, header=True):
-        ws3.append(r)
+        # --- Mostrar resultado ---
+        st.write("### Resultado filtrado")
+        st.dataframe(df_filtrado[columnas_requeridas], use_container_width=True)
 
-    # Crear gráfico de líneas por esquema si hay datos
-    if not resumen_por_esquema.empty:
-        # Suponiendo que la estructura es: ['Esquema', 'Año', 'Promedio']
-        # Agregamos un gráfico por cada esquema
-        esquemas = resumen_por_esquema['Esquema'].unique()
-        start_row = 2
-        for esquema in esquemas:
-            df_temp = resumen_por_esquema[resumen_por_esquema['Esquema'] == esquema]
-            if df_temp.empty:
-                continue
+        # --- Calcular estadísticas ---
+        if "Tarifa2" in df_filtrado.columns and not df_filtrado["Tarifa2"].empty:
+            promedio = df_filtrado["Tarifa2"].mean()
+            desviacion = df_filtrado["Tarifa2"].std()
+            maximo = df_filtrado["Tarifa2"].max()
 
-            chart = LineChart()
-            chart.title = f"{esquema} - Promedio por Año"
-            chart.style = 10
-            chart.y_axis.title = "Valor Promedio"
-            chart.x_axis.title = "Año"
-            chart.marker = True
-            chart.smooth = True
+            resumen_general = pd.DataFrame({
+                "Métrica": ["Promedio", "Desviación estándar", "Máximo"],
+                "Valor": [promedio, desviacion, maximo]
+            })
 
-            # Insertar datos en la hoja si no existen
-            for r in dataframe_to_rows(df_temp, index=False, header=True):
-                ws3.append(r)
+            st.write("### 📈 Resumen general (Tarifa2)")
+            st.dataframe(resumen_general, use_container_width=True)
 
-            # Calcular rango de datos
-            end_row = start_row + len(df_temp)
-            data = Reference(ws3, min_col=3, min_row=start_row, max_col=3, max_row=end_row)
-            cats = Reference(ws3, min_col=2, min_row=start_row + 1, max_row=end_row)
-            chart.add_data(data, titles_from_data=True)
-            chart.set_categories(cats)
+            # --- Resumen por Esquema ---
+            if "Esquema de aseguramiento" in df_filtrado.columns:
+                resumen_por_esquema = (
+                    df_filtrado.groupby("Esquema de aseguramiento")["Tarifa2"]
+                    .agg(["mean", "std", "max"])
+                    .reset_index()
+                    .rename(columns={
+                        "mean": "Promedio",
+                        "std": "Desviación estándar",
+                        "max": "Máximo"
+                    })
+                )
+                st.write("### 📊 Resumen por Esquema de aseguramiento")
+                st.dataframe(resumen_por_esquema, use_container_width=True)
+            else:
+                resumen_por_esquema = pd.DataFrame(columns=["Esquema de aseguramiento", "Promedio", "Desviación estándar", "Máximo"])
+                st.warning("No se encontró la columna 'Esquema de aseguramiento'.")
 
-            # Insertar gráfico
-            ws3.add_chart(chart, f"E{start_row}")
+        else:
+            resumen_general = pd.DataFrame({
+                "Métrica": ["Promedio", "Desviación estándar", "Máximo"],
+                "Valor": ["N/A", "N/A", "N/A"]
+            })
+            resumen_por_esquema = pd.DataFrame(columns=["Esquema de aseguramiento", "Promedio", "Desviación estándar", "Máximo"])
+            st.warning("No se encontró la columna 'Tarifa2' o no tiene datos numéricos.")
 
-            # Mover inicio para el siguiente esquema
-            start_row = end_row + 3
+        # --- Función para generar Excel con gráficos ---
+        def convertir_excel(df_filtrado, resumen_general, resumen_por_esquema):
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_filtrado.to_excel(writer, index=False, sheet_name='Datos Filtrados')
 
-    # Guardar archivo en memoria
-    wb.save(output)
-    output.seek(0)
-    return output
+                # Escribimos las tablas
+                resumen_general.to_excel(writer, index=False, sheet_name='Resumen Tarifa2', startrow=0)
+                startrow = len(resumen_general) + 3
+                resumen_por_esquema.to_excel(writer, index=False, sheet_name='Resumen Tarifa2', startrow=startrow)
 
+            # Cargar libro para añadir gráficos
+            output.seek(0)
+            wb = load_workbook(output)
+            ws = wb["Resumen Tarifa2"]
 
-# =====================
-# INTERFAZ STREAMLIT
-# =====================
-st.title("📈 Exportar Datos y Gráficos a Excel")
+            # --- Gráfico 1: Promedio general ---
+            if "Año" in df_filtrado.columns:
+                df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
+                chart_data_row = startrow + len(resumen_por_esquema) + 5
+                for r in dataframe_to_rows(df_por_anio, index=False, header=True):
+                    ws.append(r)
 
-# Ejemplo de datos (puedes reemplazar con tus propios DataFrames)
-data = {
-    'Año': [2020, 2021, 2022, 2023],
-    'Promedio': [100, 120, 90, 150]
-}
-df_filtrado = pd.DataFrame(data)
-resumen_general = df_filtrado.copy()
+                chart1 = BarChart()
+                chart1.title = "Promedio de Tarifa2 por Año"
+                chart1.y_axis.title = "Promedio"
+                chart1.x_axis.title = "Año"
+                data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
+                cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
+                chart1.add_data(data_ref, titles_from_data=False)
+                chart1.set_categories(cats_ref)
+                ws.add_chart(chart1, f"E{chart_data_row}")
 
-resumen_por_esquema = pd.DataFrame({
-    'Esquema': ['A', 'A', 'B', 'B'],
-    'Año': [2020, 2021, 2020, 2021],
-    'Promedio': [80, 110, 90, 130]
-})
+            # --- Gráfico 2: Promedio por Esquema ---
+            if not resumen_por_esquema.empty:
+                chart2 = BarChart()
+                chart2.title = "Promedio Tarifa2 por Esquema de aseguramiento"
+                chart2.y_axis.title = "Promedio"
+                chart2.x_axis.title = "Esquema"
+                data_ref2 = Reference(ws, min_col=2, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
+                cats_ref2 = Reference(ws, min_col=1, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
+                chart2.add_data(data_ref2, titles_from_data=False)
+                chart2.set_categories(cats_ref2)
+                ws.add_chart(chart2, "E10")
 
-# Convertir a Excel
-data = convertir_excel(df_filtrado, resumen_general, resumen_por_esquema)
+            # Guardar
+            new_output = BytesIO()
+            wb.save(new_output)
+            return new_output.getvalue()
 
-# Botón de descarga
-st.download_button(
-    label="📥 Descargar Excel con Gráficos de Líneas",
-    data=data,
-    file_name="reporte_cnsf.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+        # --- Botón de descarga ---
+        st.download_button(
+            label="📥 Descargar Excel con tablas y gráficos",
+            data=convertir_excel(
+                df_filtrado,
+                resumen_general,
+                resumen_por_esquema
+            ),
+            file_name="resultado_filtrado.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    else:
+        st.error(f"Tu archivo no tiene todas las columnas necesarias: {columnas_requeridas}")
+else:
+    st.info("Sube un archivo Excel para comenzar.")

@@ -126,7 +126,6 @@ if uploaded_file:
                 chart1.y_axis.title = "Valor Promedio"
                 chart1.x_axis.title = "Año"
                 chart1.marker = True  # para mostrar puntos en cada año
-                chart1.smooth = True  # suaviza la línea
 
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
@@ -142,7 +141,7 @@ if uploaded_file:
                 chart2.y_axis.title = "Promedio"
                 chart2.x_axis.title = "Esquema"
                 chart2.marker = True  # para mostrar puntos en cada año
-                chart2.smooth = True  # suaviza la línea
+        
                 data_ref2 = Reference(ws, min_col=2, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
                 cats_ref2 = Reference(ws, min_col=1, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
                 chart2.add_data(data_ref2, titles_from_data=False)

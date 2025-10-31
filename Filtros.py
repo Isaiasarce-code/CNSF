@@ -128,7 +128,7 @@ if uploaded_file:
             # --- Gráfico 1: Promedio por Año ---
             if "Año" in df_filtrado.columns:
                 df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
-                df_por_anio["Tarifa2"] = df_por_anio["Tarifa2"] * 100
+                df_por_anio["Tarifa2"] = df_por_anio["Tarifa2"] * 100.round(2)               
                 df_por_anio.columns = ["Año", "Valor Promedio"]
                 chart_data_row = startrow + len(resumen_por_esquema) + 2
                 for r in dataframe_to_rows(df_por_anio, index=False, header=True):
@@ -152,6 +152,8 @@ if uploaded_file:
                 
                 # Etiquetas de datos como porcentaje
                 from openpyxl.chart.label import DataLabelList
+                chart1.dataLabels = DataLabelList()
+                chart1.dataLabels.showVal = True
                 chart1.dataLabels.numberFormat = "0.00%"
                 
                 # Cambiar color de la línea (accediendo a la serie)

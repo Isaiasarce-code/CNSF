@@ -116,7 +116,7 @@ if uploaded_file:
             # --- Gráfico 1: Promedio general ---
             if "Año" in df_filtrado.columns:
                 df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
-                chart_data_row = startrow + len(resumen_por_esquema) + 3
+                chart_data_row = startrow + len(resumen_por_esquema) + 2
                 for r in dataframe_to_rows(df_por_anio, index=False, header=True):
                     ws.append(r)
 

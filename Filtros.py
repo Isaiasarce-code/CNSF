@@ -157,7 +157,10 @@ if uploaded_file:
                 chart1.dataLabels.showCatName = False  
                 chart1.dataLabels.numberFormat = "0.00%"
 
-                
+                chart1.add_data(data_ref, titles_from_data=False)
+                chart1.series[0].title = None  # Eliminar el nombre de la serie
+                chart1.set_categories(cats_ref)
+            
                 # Cambiar color de la línea (accediendo a la serie)
                 if chart1.series:
                     chart1.series[0].graphicalProperties.line.solidFill = "0070C0"  # Azul estándar

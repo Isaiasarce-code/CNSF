@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from openpyxl import load_workbook
-from openpyxl.chart import BarChart, Reference
+from openpyxl.chart import LineChart, Reference
 
 st.set_page_config(page_title="Filtro de Datos", layout="wide")
 
@@ -119,10 +119,14 @@ if uploaded_file:
                 for r in dataframe_to_rows(df_por_anio, index=False, header=True):
                     ws.append(r)
 
-                chart1 = BarChart()
-                chart1.title = "Promedio de Tarifa2 por Año"
-                chart1.y_axis.title = "Promedio"
+                chart1 = LineChart()
+                chart1.title = "Promedio por Año"
+                chart1.style = 10  # estilo predeterminado con líneas suaves
+                chart1.y_axis.title = "Valor Promedio"
                 chart1.x_axis.title = "Año"
+                chart1.marker = True  # para mostrar puntos en cada año
+                chart1.smooth = True  # suaviza la línea
+
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 chart1.add_data(data_ref, titles_from_data=False)
@@ -131,10 +135,13 @@ if uploaded_file:
 
             # --- Gráfico 2: Promedio por Esquema ---
             if not resumen_por_esquema.empty:
-                chart2 = BarChart()
+                chart2 = LineChart()
                 chart2.title = "Promedio Tarifa2 por Esquema de aseguramiento"
+                chart2.style = 10  # estilo predeterminado con líneas suaves
                 chart2.y_axis.title = "Promedio"
                 chart2.x_axis.title = "Esquema"
+                chart2.marker = True  # para mostrar puntos en cada año
+                chart2.smooth = True  # suaviza la línea
                 data_ref2 = Reference(ws, min_col=2, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
                 cats_ref2 = Reference(ws, min_col=1, min_row=startrow+2, max_row=startrow+1+len(resumen_por_esquema))
                 chart2.add_data(data_ref2, titles_from_data=False)

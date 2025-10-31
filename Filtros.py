@@ -149,12 +149,12 @@ if uploaded_file:
 
                 chart1.add_data(data_ref, titles_from_data=False)
                 chart1.set_categories(cats_ref)
-                chart1.series[0].title = ""  # Eliminar el nombre de la serie
+                chart1.series[0].title = None  # Eliminar el nombre de la serie
                 
                 # Etiquetas de datos como porcentaje
                 from openpyxl.chart.label import DataLabelList
                 chart1.dataLabels = DataLabelList()
-                chart1.dataLabels.showVal = True
+                chart1.dataLabels.showVal = False
                 chart1.dataLabels.showCatName = False  
                 chart1.dataLabels.numberFormat = "0.00%"
 

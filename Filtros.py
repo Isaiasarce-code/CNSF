@@ -100,9 +100,8 @@ if uploaded_file:
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
 
-                chart1.add_data(data_ref, titles_from_data=False)
+            
                 chart1.set_categories(cats_ref)
-                chart1.series[0].title = ""
 
                 chart1.dataLabels = DataLabelList()
                 chart1.dataLabels.showVal = True

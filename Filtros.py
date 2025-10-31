@@ -137,7 +137,13 @@ if uploaded_file:
                 chart1.x_axis.title = "Año"
                 chart1.marker = True
                 chart1.legend = None
-                chart1.graphicalProperties.line.solidFill = "0070C0"
+                from openpyxl.drawing.fill import SolidFillProperties
+
+                # Accede a la primera serie del gráfico
+                if chart1.series:
+                chart1.series[0].graphicalProperties.line.solidFill = "0070C0"  # Azul estándar
+
+                #chart1.graphicalProperties.line.solidFill = "0070C0"
             
                 data_ref = Reference(ws, min_col=2, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))
                 cats_ref = Reference(ws, min_col=1, min_row=chart_data_row+1, max_row=chart_data_row+len(df_por_anio))

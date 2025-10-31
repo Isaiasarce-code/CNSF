@@ -128,7 +128,7 @@ if uploaded_file:
             # --- Gráfico 1: Promedio por Año ---
             if "Año" in df_filtrado.columns:
                 df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
-                df_por_anio["Tarifa2"] = df_por_anio["Tarifa2"] * 100.round(2)               
+                df_por_anio["Tarifa2"] = (df_por_anio["Tarifa2"] * 100).round(2)               
                 df_por_anio.columns = ["Año", "Valor Promedio"]
                 chart_data_row = startrow + len(resumen_por_esquema) + 2
                 for r in dataframe_to_rows(df_por_anio, index=False, header=True):

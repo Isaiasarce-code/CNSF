@@ -1,151 +1,118 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-from openpyxl import load_workbook
+import zipfile
+from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
-from openpyxl.utils.dataframe import dataframe_to_rows 
 
-st.set_page_config(page_title="Filtro de Datos", layout="wide")
+st.set_page_config(page_title="Filtro de CSVs Rápido", layout="wide")
+st.title("📊 Filtro de tablas CSV por banderas (Optimizado y rápido)")
 
-st.title("📊 Filtro de tabla por banderas (todas las hojas)")
+# --- Cargar archivos ---
+st.write("💡 Puedes subir uno o varios archivos CSV dentro de un archivo ZIP (uno por hoja).")
 
-# --- Cargar archivo Excel ---
-uploaded_file = st.file_uploader("Sube tu archivo Excel", type=["xlsx", "xls"])
+uploaded_file = st.file_uploader("Sube un archivo ZIP con tus CSVs", type=["zip"])
 
 if uploaded_file:
-    # Cargar todas las hojas del Excel como diccionario de DataFrames
-    hojas = pd.read_excel(uploaded_file, sheet_name=None)
-    nombres_hojas = list(hojas.keys())
+    # Leer el ZIP sin extraer a disco
+    with zipfile.ZipFile(uploaded_file) as z:
+        lista_csv = [f for f in z.namelist() if f.endswith(".csv")]
+        
+        if not lista_csv:
+            st.error("El archivo ZIP no contiene archivos CSV.")
+        else:
+            # Leer solo el primero para construir filtros
+            with z.open(lista_csv[0]) as f:
+                df_base = pd.read_csv(f, low_memory=False)
 
-    # Verificar columnas en la primera hoja como referencia
-    columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]
-    primera_hoja = list(hojas.values())[0]
+            columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]
 
-    if all(col in primera_hoja.columns for col in columnas_requeridas):
-        
-        # --- Filtros dinámicos (basados en la primera hoja) ---
-        st.sidebar.header("Filtros")
-        
-        entidades_disponibles = sorted(primera_hoja["Entidad"].dropna().unique().tolist())
-        entidad_opcion = st.sidebar.selectbox("Selecciona Entidad", ["(Todos)"] + entidades_disponibles)
-        
-        modalidades_disponibles = sorted(primera_hoja["Modalidad"].dropna().unique().tolist())
-        modalidad_opcion = st.sidebar.selectbox("Selecciona Modalidad", ["(Todos)"] + modalidades_disponibles)
-        
-        ciclos_disponibles = sorted(primera_hoja["Ciclo"].dropna().unique().tolist())
-        ciclo_opcion = st.sidebar.selectbox("Selecciona Ciclo", ["(Todos)"] + ciclos_disponibles)
-        
-        cultivos_disponibles = sorted(primera_hoja["Cultivo"].dropna().unique().tolist())
-        cultivo_opcion = st.sidebar.selectbox("Selecciona Cultivo", ["(Todos)"] + cultivos_disponibles)
+            if all(col in df_base.columns for col in columnas_requeridas):
+                # --- Filtros dinámicos ---
+                st.sidebar.header("Filtros")
+                entidad_opcion = st.sidebar.selectbox("Entidad", ["(Todos)"] + sorted(df_base["Entidad"].dropna().unique().tolist()))
+                modalidad_opcion = st.sidebar.selectbox("Modalidad", ["(Todos)"] + sorted(df_base["Modalidad"].dropna().unique().tolist()))
+                ciclo_opcion = st.sidebar.selectbox("Ciclo", ["(Todos)"] + sorted(df_base["Ciclo"].dropna().unique().tolist()))
+                cultivo_opcion = st.sidebar.selectbox("Cultivo", ["(Todos)"] + sorted(df_base["Cultivo"].dropna().unique().tolist()))
+                generar_graficos = st.sidebar.checkbox("Generar gráficos (puede tardar más)", value=False)
 
-        # --- Aplicar filtros a cada hoja ---
-        hojas_filtradas = {}
-        for nombre, df in hojas.items():
-            df_filtrado = df.copy()
-            if entidad_opcion != "(Todos)":
-                df_filtrado = df_filtrado[df_filtrado["Entidad"] == entidad_opcion]
-            if modalidad_opcion != "(Todos)":
-                df_filtrado = df_filtrado[df_filtrado["Modalidad"] == modalidad_opcion]
-            if ciclo_opcion != "(Todos)":
-                df_filtrado = df_filtrado[df_filtrado["Ciclo"] == ciclo_opcion]
-            if cultivo_opcion != "(Todos)":
-                df_filtrado = df_filtrado[df_filtrado["Cultivo"] == cultivo_opcion]
-            hojas_filtradas[nombre] = df_filtrado
+                # --- Crear libro Excel en memoria ---
+                wb = Workbook()
+                wb.remove(wb.active)
 
-        # --- Mostrar resultados en pantalla ---
-        for nombre, df_filtrado in hojas_filtradas.items():
-            st.write(f"### 📄 Resultados filtrados - Hoja: {nombre}")
-            if not df_filtrado.empty:
-                st.dataframe(df_filtrado[columnas_requeridas], use_container_width=True)
+                for nombre_csv in lista_csv:
+                    with z.open(nombre_csv) as f:
+                        df = pd.read_csv(f, low_memory=False)
+                        if not all(col in df.columns for col in columnas_requeridas):
+                            continue
+
+                        # Filtro rápido usando máscara booleana
+                        mask = pd.Series(True, index=df.index)
+                        if entidad_opcion != "(Todos)":
+                            mask &= df["Entidad"] == entidad_opcion
+                        if modalidad_opcion != "(Todos)":
+                            mask &= df["Modalidad"] == modalidad_opcion
+                        if ciclo_opcion != "(Todos)":
+                            mask &= df["Ciclo"] == ciclo_opcion
+                        if cultivo_opcion != "(Todos)":
+                            mask &= df["Cultivo"] == cultivo_opcion
+                        df_filtrado = df[mask]
+
+                        if df_filtrado.empty:
+                            continue
+
+                        # Crear hoja nueva
+                        ws = wb.create_sheet(title=nombre_csv.replace(".csv", "")[:28])
+
+                        # Escribir datos rápido
+                        for r_idx, row in enumerate([df_filtrado.columns.tolist()] + df_filtrado.values.tolist(), start=1):
+                            ws.append(row)
+
+                        # Calcular estadísticas si hay Tarifa2
+                        if "Tarifa2" in df_filtrado.columns and df_filtrado["Tarifa2"].notna().any():
+                            prom = df_filtrado["Tarifa2"].mean()
+                            desv = df_filtrado["Tarifa2"].std()
+                            maxv = df_filtrado["Tarifa2"].max()
+                            start_row = len(df_filtrado) + 3
+                            ws.cell(row=start_row, column=1, value="Promedio")
+                            ws.cell(row=start_row, column=2, value=prom)
+                            ws.cell(row=start_row + 1, column=1, value="Desviación estándar")
+                            ws.cell(row=start_row + 1, column=2, value=desv)
+                            ws.cell(row=start_row + 2, column=1, value="Máximo")
+                            ws.cell(row=start_row + 2, column=2, value=maxv)
+
+                            # --- Gráfico (opcional) ---
+                            if generar_graficos and "Año" in df_filtrado.columns:
+                                df_por_anio = df_filtrado.groupby("Año")["Tarifa2"].mean().reset_index()
+                                data_row = start_row + 5
+                                for r in df_por_anio.itertuples(index=False):
+                                    ws.append(r)
+
+                                chart = LineChart()
+                                chart.title = "Promedio Tarifa2 por Año"
+                                chart.y_axis.title = "Promedio"
+                                chart.x_axis.title = "Año"
+
+                                data = Reference(ws, min_col=2, min_row=data_row + 1, max_row=data_row + len(df_por_anio))
+                                cats = Reference(ws, min_col=1, min_row=data_row + 1, max_row=data_row + len(df_por_anio))
+                                chart.add_data(data, titles_from_data=False)
+                                chart.set_categories(cats)
+                                ws.add_chart(chart, f"E{data_row}")
+
+                # --- Guardar en memoria ---
+                output = BytesIO()
+                wb.save(output)
+                output.seek(0)
+
+                st.download_button(
+                    "📥 Descargar Excel filtrado y optimizado",
+                    data=output,
+                    file_name="resultado_filtrado.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
             else:
-                st.warning(f"La hoja **{nombre}** no tiene datos con los filtros seleccionados.")
-
-        # --- Función para crear el Excel final ---
-        def convertir_excel_todas_hojas(hojas_filtradas):
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                for nombre, df_filtrado in hojas_filtradas.items():
-                    if df_filtrado.empty:
-                        continue
-                    df_filtrado.to_excel(writer, index=False, sheet_name=f"{nombre[:28]}_Filtrado")
-
-                    # Si existe Tarifa2, crear resumen en la misma hoja
-                    if "Tarifa2" in df_filtrado.columns and not df_filtrado["Tarifa2"].empty:
-                        promedio = df_filtrado["Tarifa2"].mean()
-                        desviacion = df_filtrado["Tarifa2"].std()
-                        maximo = df_filtrado["Tarifa2"].max()
-
-                        resumen_general = pd.DataFrame({
-                            "Métrica": ["Promedio", "Desviación estándar", "Máximo"],
-                            "Valor": [promedio, desviacion, maximo]
-                        })
-                        start_row = len(df_filtrado) + 3
-                        resumen_general.to_excel(writer, index=False, sheet_name=f"{nombre[:28]}_Filtrado", startrow=start_row)
-
-                        # Resumen por esquema si existe
-                        if "Esquema de aseguramiento" in df_filtrado.columns:
-                            resumen_por_esquema = (
-                                df_filtrado.groupby("Esquema de aseguramiento")["Tarifa2"]
-                                .agg(["mean", "std", "max"])
-                                .reset_index()
-                                .rename(columns={
-                                    "mean": "Promedio",
-                                    "std": "Desviación estándar",
-                                    "max": "Máximo"
-                                })
-                            )
-                            resumen_por_esquema.to_excel(
-                                writer,
-                                index=False,
-                                sheet_name=f"{nombre[:28]}_Filtrado",
-                                startrow=start_row + len(resumen_general) + 3
-                            )
-            # Añadir gráficos
-            output.seek(0)
-            wb = load_workbook(output)
-            for nombre in wb.sheetnames:
-                ws = wb[nombre]
-                if "Tarifa2" not in [cell.value for cell in ws[1]]:
-                    continue
-
-                # Buscar datos para graficar
-                col_tarifa = None
-                col_anio = None
-                for i, cell in enumerate(ws[1], 1):
-                    if cell.value == "Tarifa2":
-                        col_tarifa = i
-                    if cell.value == "Año":
-                        col_anio = i
-                if not col_tarifa:
-                    continue
-
-                # Gráfico por Año
-                if col_anio:
-                    max_row = ws.max_row
-                    chart = LineChart()
-                    chart.title = "Promedio Tarifa2 por Año"
-                    chart.y_axis.title = "Promedio"
-                    chart.x_axis.title = "Año"
-                    data = Reference(ws, min_col=col_tarifa, min_row=2, max_row=max_row)
-                    cats = Reference(ws, min_col=col_anio, min_row=2, max_row=max_row)
-                    chart.add_data(data, titles_from_data=False)
-                    chart.set_categories(cats)
-                    ws.add_chart(chart, "L2")
-
-            new_output = BytesIO()
-            wb.save(new_output)
-            return new_output.getvalue()
-
-        # --- Botón de descarga ---
-        st.download_button(
-            label="📥 Descargar Excel con hojas filtradas y resúmenes",
-            data=convertir_excel_todas_hojas(hojas_filtradas),
-            file_name="resultado_todas_las_hojas.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-    else:
-        st.error(f"Tu archivo no tiene todas las columnas necesarias: {columnas_requeridas}")
+                st.error(f"Faltan columnas requeridas: {columnas_requeridas}")
 
 else:
-    st.info("Sube un archivo Excel para comenzar.")
+    st.info("Sube un archivo ZIP con tus CSVs para comenzar.")

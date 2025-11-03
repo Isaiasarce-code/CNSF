@@ -8,7 +8,8 @@ st.title("📋 Filtro dinámico de datos CSV")
 uploaded_file = st.file_uploader("Sube tu archivo CSV (delimitado por comas)", type=["csv"])
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+    df = pd.read_csv(uploaded_file, encoding="latin1")
+
     df.columns = df.columns.str.strip()  # Limpia espacios en nombres de columnas
 
     columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]

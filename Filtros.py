@@ -1,77 +1,83 @@
 import streamlit as st
 import pandas as pd
+import zipfile
+from io import BytesIO, TextIOWrapper
+from openpyxl import Workbook
 
-st.set_page_config(page_title="Filtro Dinámico CSV", layout="wide")
-st.title("📋 Filtro dinámico de datos CSV")
+st.set_page_config(page_title="Filtro múltiple ZIP", layout="wide")
+st.title("📦 Filtro de múltiples CSV desde ZIP")
 
-# --- Opciones de carga ---
+# --- Configuración de carga ---
 st.sidebar.subheader("Configuración de carga")
 encoding_opcion = st.sidebar.selectbox(
-    "Codificación del archivo",
+    "Codificación de los archivos",
     ["utf-8", "latin1", "cp1252", "ISO-8859-1"],
-    index=1  # latin1 como predeterminado
+    index=1
 )
 
-# --- Cargar archivo CSV con caché ---
-@st.cache_data
-def cargar_csv(file, encoding):
-    return pd.read_csv(file, encoding=encoding)
+# --- Filtros fijos ---
+st.sidebar.subheader("Filtros aplicados a todos los archivos")
+entidad = st.sidebar.text_input("Entidad (dejar vacío para todos)")
+modalidad = st.sidebar.text_input("Modalidad")
+ciclo = st.sidebar.text_input("Ciclo")
+cultivo = st.sidebar.text_input("Cultivo")
 
-uploaded_file = st.file_uploader("Sube tu archivo CSV (delimitado por comas)", type=["csv"])
+# --- Cargar ZIP ---
+uploaded_zip = st.file_uploader("Sube un archivo ZIP con varios CSVs", type=["zip"])
 
-if uploaded_file:
-    try:
-        df = cargar_csv(uploaded_file, encoding_opcion)
-        df.columns = df.columns.str.strip()  # Limpia espacios en nombres de columnas
+if uploaded_zip:
+    with zipfile.ZipFile(uploaded_zip) as z:
+        csv_files = [f for f in z.namelist() if f.endswith(".csv")]
 
-        columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]
-        if all(col in df.columns for col in columnas_requeridas):
-
-            # --- Filtros dinámicos segmentados ---
-            st.sidebar.header("Filtros dinámicos")
-
-            entidad_opcion = st.sidebar.selectbox(
-                "Entidad", ["(Todos)"] + sorted(df["Entidad"].dropna().unique())
-            )
-            df_entidad = df if entidad_opcion == "(Todos)" else df[df["Entidad"] == entidad_opcion]
-
-            modalidad_opcion = st.sidebar.selectbox(
-                "Modalidad", ["(Todos)"] + sorted(df_entidad["Modalidad"].dropna().unique())
-            )
-            df_modalidad = df_entidad if modalidad_opcion == "(Todos)" else df_entidad[df_entidad["Modalidad"] == modalidad_opcion]
-
-            ciclo_opcion = st.sidebar.selectbox(
-                "Ciclo", ["(Todos)"] + sorted(df_modalidad["Ciclo"].dropna().unique())
-            )
-            df_ciclo = df_modalidad if ciclo_opcion == "(Todos)" else df_modalidad[df_modalidad["Ciclo"] == ciclo_opcion]
-
-            cultivo_opcion = st.sidebar.selectbox(
-                "Cultivo", ["(Todos)"] + sorted(df_ciclo["Cultivo"].dropna().unique())
-            )
-            df_filtrado = df_ciclo if cultivo_opcion == "(Todos)" else df_ciclo[df_ciclo["Cultivo"] == cultivo_opcion]
-
-            # --- Mostrar resultado ---
-            st.write("### 🔍 Datos filtrados")
-            if len(df_filtrado) > 5000:
-                st.warning(f"Demasiadas filas para mostrar ({len(df_filtrado)}). Se muestran solo las primeras 500.")
-                st.dataframe(df_filtrado.head(500), use_container_width=True)
-            else:
-                st.dataframe(df_filtrado, use_container_width=True)
-
-            # --- Botón de descarga ---
-            csv_filtrado = df_filtrado.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Descargar CSV filtrado",
-                data=csv_filtrado,
-                file_name="datos_filtrados.csv",
-                mime="text/csv"
-            )
-
+        if not csv_files:
+            st.error("El ZIP no contiene archivos CSV.")
         else:
-            st.error(f"Tu archivo debe contener las columnas: {columnas_requeridas}")
+            st.success(f"Se encontraron {len(csv_files)} archivos CSV en el ZIP.")
 
-    except UnicodeDecodeError:
-        st.error(f"No se pudo leer el archivo con la codificación '{encoding_opcion}'. Prueba con otra.")
-        st.stop()
+            # --- Crear libro Excel ---
+            wb = Workbook()
+            wb.remove(wb.active)  # Quitar hoja por defecto
+
+            for file_name in csv_files:
+                with z.open(file_name) as f:
+                    try:
+                        df = pd.read_csv(TextIOWrapper(f, encoding=encoding_opcion))
+                        df.columns = df.columns.str.strip()
+
+                        columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]
+                        if not all(col in df.columns for col in columnas_requeridas):
+                            st.warning(f"{file_name} no tiene todas las columnas requeridas.")
+                            continue
+
+                        # --- Aplicar filtros fijos ---
+                        df_filtrado = df.copy()
+                        if entidad:
+                            df_filtrado = df_filtrado[df_filtrado["Entidad"] == entidad]
+                        if modalidad:
+                            df_filtrado = df_filtrado[df_filtrado["Modalidad"] == modalidad]
+                        if ciclo:
+                            df_filtrado = df_filtrado[df_filtrado["Ciclo"] == ciclo]
+                        if cultivo:
+                            df_filtrado = df_filtrado[df_filtrado["Cultivo"] == cultivo]
+
+                        # --- Agregar hoja al Excel ---
+                        ws = wb.create_sheet(title=file_name.replace(".csv", "")[:31])
+                        for r in df_filtrado.itertuples(index=False):
+                            ws.append(list(r))
+                        ws.insert_rows(1)
+                        ws.append(list(df_filtrado.columns))
+
+                    except Exception as e:
+                        st.error(f"Error procesando {file_name}: {e}")
+
+            # --- Descargar Excel ---
+            output = BytesIO()
+            wb.save(output)
+            st.download_button(
+                label="📥 Descargar Excel con hojas filtradas",
+                data=output.getvalue(),
+                file_name="filtrado_multiples_archivos.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 else:
-    st.info("Sube un archivo CSV para comenzar.")
+    st.info("Sube un archivo ZIP para comenzar.")

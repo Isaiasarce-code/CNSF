@@ -24,7 +24,8 @@ if uploaded_files:
                             df = pd.read_csv(f, low_memory=False)
                             all_dfs.append(df)
         elif uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file, low_memory=False)
+            df = pd.read_csv(uploaded_file, encoding="latin1")  # o encoding="ISO-8859-1"
+
             all_dfs.append(df)
 
     if all_dfs:

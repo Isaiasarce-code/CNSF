@@ -33,12 +33,6 @@ if uploaded_files:
             except Exception as e:
                 st.warning(f"No se pudo leer el archivo '{uploaded_file.name}': {e}")
 
-
-        elif uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file, encoding="latin1")  # o encoding="ISO-8859-1"
-
-            all_dfs.append(df)
-
     if all_dfs:
         # --- Unir todos los archivos ---
         df = pd.concat(all_dfs, ignore_index=True)

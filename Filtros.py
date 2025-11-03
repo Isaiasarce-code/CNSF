@@ -16,17 +16,23 @@ if uploaded_files:
     all_dfs = []
 
     for uploaded_file in uploaded_files:
-
         if uploaded_file.name.endswith(".zip"):
-    with zipfile.ZipFile(uploaded_file) as z:
-        for filename in z.namelist():
-            if filename.endswith(".csv"):
-                with z.open(filename) as f:
-                    try:
-                        df = pd.read_csv(f, encoding="latin1", low_memory=False)
-                        all_dfs.append(df)
-                    except Exception as e:
-                        st.warning(f"No se pudo leer el archivo '{filename}': {e}")
+            with zipfile.ZipFile(uploaded_file) as z:
+                for filename in z.namelist():
+                    if filename.endswith(".csv"):
+                        with z.open(filename) as f:
+                            try:
+                                df = pd.read_csv(f, encoding="latin1", low_memory=False)
+                                all_dfs.append(df)
+                            except Exception as e:
+                                st.warning(f"No se pudo leer el archivo '{filename}': {e}")
+        elif uploaded_file.name.endswith(".csv"):
+            try:
+                df = pd.read_csv(uploaded_file, encoding="latin1", low_memory=False)
+                all_dfs.append(df)
+            except Exception as e:
+                st.warning(f"No se pudo leer el archivo '{uploaded_file.name}': {e}")
+
 
         elif uploaded_file.name.endswith(".csv"):
             df = pd.read_csv(uploaded_file, encoding="latin1")  # o encoding="ISO-8859-1"

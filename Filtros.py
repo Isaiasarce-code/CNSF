@@ -8,7 +8,23 @@ st.title("📋 Filtro dinámico de datos CSV")
 uploaded_file = st.file_uploader("Sube tu archivo CSV (delimitado por comas)", type=["csv"])
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file, encoding="latin1")
+
+    # --- Opciones de carga ---
+st.sidebar.subheader("Opciones de carga")
+encoding_opcion = st.sidebar.selectbox(
+    "Codificación del archivo",
+    ["utf-8", "latin1", "cp1252", "ISO-8859-1"],
+    index=1  # latin1 como opción predeterminada
+)
+
+if uploaded_file:
+    try:
+        df = pd.read_csv(uploaded_file, encoding=encoding_opcion)
+        df.columns = df.columns.str.strip()  # Limpia espacios en nombres de columnas
+    except UnicodeDecodeError:
+        st.error(f"No se pudo leer el archivo con la codificación '{encoding_opcion}'. Prueba con otra.")
+        st.stop()
+
 
     df.columns = df.columns.str.strip()  # Limpia espacios en nombres de columnas
 

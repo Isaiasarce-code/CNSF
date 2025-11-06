@@ -10,16 +10,16 @@ st.title("📦 Filtro de múltiples CSV desde ZIP (Primero selecciona filtros)")
 # --- Paso 1: Seleccionar filtros antes de subir archivos ---
 st.sidebar.header("🎯 Selecciona los filtros antes de subir")
 
-entidad_sel = st.sidebar.multiselect(
+entidad_sel = st.sidebar.selectbox(
     "Entidad (opcional)", ["Aguascalientes", "Yucatán", "Chiapas", "CDMX", "Jalisco"], placeholder="Selecciona..."
 )
-modalidad_sel = st.sidebar.multiselect(
+modalidad_sel = st.sidebar.selectbox(
     "Modalidad (opcional)", ["Riego", "Temporal"], placeholder="Selecciona..."
 )
-ciclo_sel = st.sidebar.multiselect(
+ciclo_sel = st.sidebar.selectbox(
     "Ciclo (opcional)", ["Otoño-Invierno", "Primavera-Verano"], placeholder="Selecciona..."
 )
-cultivo_sel = st.sidebar.multiselect(
+cultivo_sel = st.sidebar.selectbox(
     "Cultivo (opcional)", ["Maíz", "Sorgo", "Caña", "Trigo", "Soja", "Ajo"], placeholder="Selecciona..."
 )
 

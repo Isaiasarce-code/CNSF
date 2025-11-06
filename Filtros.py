@@ -11,16 +11,23 @@ st.title("📦 Filtro de múltiples CSV desde ZIP (Primero selecciona filtros)")
 st.sidebar.header("🎯 Selecciona los filtros antes de subir")
 
 entidad_sel = st.sidebar.selectbox(
-    "Entidad (opcional)", ["Aguascalientes", "Yucatán", "Chiapas", "CDMX", "Jalisco"], placeholder="Selecciona..."
+    "Entidad (opcional)",
+    ["", "Aguascalientes", "Yucatán", "Chiapas", "CDMX", "Jalisco"]
 )
+
 modalidad_sel = st.sidebar.selectbox(
-    "Modalidad (opcional)", ["Riego", "Temporal"], placeholder="Selecciona..."
+    "Modalidad (opcional)",
+    ["", "Riego", "Temporal"]
 )
+
 ciclo_sel = st.sidebar.selectbox(
-    "Ciclo (opcional)", ["Otoño-Invierno", "Primavera-Verano"], placeholder="Selecciona..."
+    "Ciclo (opcional)",
+    ["", "Otoño-Invierno", "Primavera-Verano"]
 )
+
 cultivo_sel = st.sidebar.selectbox(
-    "Cultivo (opcional)", ["Maíz", "Sorgo", "Caña", "Trigo", "Soja", "Ajo"], placeholder="Selecciona..."
+    "Cultivo (opcional)",
+    ["", "Maíz", "Sorgo", "Caña", "Trigo", "Soja"]
 )
 
 st.sidebar.info("💡 Primero elige tus filtros, luego sube el ZIP para aplicar.")
@@ -56,13 +63,13 @@ try:
 
                     # --- Aplicar filtros seleccionados ---
                     if entidad_sel:
-                        df = df[df["Entidad"].isin(entidad_sel)]
+                        df = df[df["Entidad"] == entidad_sel]
                     if modalidad_sel:
-                        df = df[df["Modalidad"].isin(modalidad_sel)]
+                        df = df[df["Modalidad"] == modalidad_sel]
                     if ciclo_sel:
-                        df = df[df["Ciclo"].isin(ciclo_sel)]
+                        df = df[df["Ciclo"] == ciclo_sel]
                     if cultivo_sel:
-                        df = df[df["Cultivo"].isin(cultivo_sel)]
+                        df = df[df["Cultivo"] == cultivo_sel]
 
                     if df.empty:
                         continue

@@ -20,7 +20,7 @@ ciclo_sel = st.sidebar.multiselect(
     "Ciclo (opcional)", ["Otoño-Invierno", "Primavera-Verano"], placeholder="Selecciona..."
 )
 cultivo_sel = st.sidebar.multiselect(
-    "Cultivo (opcional)", ["Maíz", "Sorgo", "Caña", "Trigo", "Soja"], placeholder="Selecciona..."
+    "Cultivo (opcional)", ["Maíz", "Sorgo", "Caña", "Trigo", "Soja", "Ajo"], placeholder="Selecciona..."
 )
 
 st.sidebar.info("💡 Primero elige tus filtros, luego sube el ZIP para aplicar.")

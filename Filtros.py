@@ -15,13 +15,6 @@ encoding_opcion = st.sidebar.selectbox(
     index=1
 )
 
-# --- Filtros fijos ---
-st.sidebar.subheader("Filtros aplicados a todos los archivos")
-entidad = st.sidebar.text_input("Entidad (dejar vacío para todos)")
-modalidad = st.sidebar.text_input("Modalidad")
-ciclo = st.sidebar.text_input("Ciclo")
-cultivo = st.sidebar.text_input("Cultivo")
-
 # --- Cargar ZIP ---
 uploaded_zip = st.file_uploader("Sube un archivo ZIP con varios CSVs", type=["zip"])
 
@@ -34,50 +27,82 @@ if uploaded_zip:
         else:
             st.success(f"Se encontraron {len(csv_files)} archivos CSV en el ZIP.")
 
-            # --- Crear libro Excel ---
-            wb = Workbook()
-            wb.remove(wb.active)  # Quitar hoja por defecto
-
+            # --- Cargar todos los datos temporalmente para obtener valores únicos ---
+            dfs = []
             for file_name in csv_files:
                 with z.open(file_name) as f:
                     try:
                         df = pd.read_csv(TextIOWrapper(f, encoding=encoding_opcion))
                         df.columns = df.columns.str.strip()
+                        if all(col in df.columns for col in ["Entidad", "Modalidad", "Ciclo", "Cultivo"]):
+                            dfs.append(df)
+                    except Exception:
+                        continue
 
-                        columnas_requeridas = ["Entidad", "Modalidad", "Ciclo", "Cultivo"]
-                        if not all(col in df.columns for col in columnas_requeridas):
-                            st.warning(f"{file_name} no tiene todas las columnas requeridas.")
-                            continue
+            if not dfs:
+                st.error("Ningún archivo tiene todas las columnas requeridas (Entidad, Modalidad, Ciclo, Cultivo).")
+            else:
+                df_total = pd.concat(dfs, ignore_index=True)
 
-                        # --- Aplicar filtros fijos ---
-                        df_filtrado = df.copy()
-                        if entidad:
-                            df_filtrado = df_filtrado[df_filtrado["Entidad"] == entidad]
-                        if modalidad:
-                            df_filtrado = df_filtrado[df_filtrado["Modalidad"] == modalidad]
-                        if ciclo:
-                            df_filtrado = df_filtrado[df_filtrado["Ciclo"] == ciclo]
-                        if cultivo:
-                            df_filtrado = df_filtrado[df_filtrado["Cultivo"] == cultivo]
+                # --- Filtros dinámicos ---
+                st.sidebar.subheader("Filtros dinámicos")
 
-                        # --- Agregar hoja al Excel ---
-                        ws = wb.create_sheet(title=file_name.replace(".csv", "")[:31])
-                        for r in df_filtrado.itertuples(index=False):
-                            ws.append(list(r))
-                        ws.insert_rows(1)
-                        ws.append(list(df_filtrado.columns))
+                entidad_sel = st.sidebar.multiselect(
+                    "Entidad", sorted(df_total["Entidad"].dropna().unique().tolist())
+                )
+                modalidad_sel = st.sidebar.multiselect(
+                    "Modalidad", sorted(df_total["Modalidad"].dropna().unique().tolist())
+                )
+                ciclo_sel = st.sidebar.multiselect(
+                    "Ciclo", sorted(df_total["Ciclo"].dropna().unique().tolist())
+                )
+                cultivo_sel = st.sidebar.multiselect(
+                    "Cultivo", sorted(df_total["Cultivo"].dropna().unique().tolist())
+                )
 
-                    except Exception as e:
-                        st.error(f"Error procesando {file_name}: {e}")
+                # --- Crear libro Excel ---
+                wb = Workbook()
+                wb.remove(wb.active)  # Quitar hoja por defecto
 
-            # --- Descargar Excel ---
-            output = BytesIO()
-            wb.save(output)
-            st.download_button(
-                label="📥 Descargar Excel con hojas filtradas",
-                data=output.getvalue(),
-                file_name="filtrado_multiples_archivos.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                for file_name in csv_files:
+                    with z.open(file_name) as f:
+                        try:
+                            df = pd.read_csv(TextIOWrapper(f, encoding=encoding_opcion))
+                            df.columns = df.columns.str.strip()
+
+                            if not all(col in df.columns for col in ["Entidad", "Modalidad", "Ciclo", "Cultivo"]):
+                                st.warning(f"{file_name} no tiene todas las columnas requeridas.")
+                                continue
+
+                            df_filtrado = df.copy()
+
+                            # --- Aplicar filtros dinámicos ---
+                            if entidad_sel:
+                                df_filtrado = df_filtrado[df_filtrado["Entidad"].isin(entidad_sel)]
+                            if modalidad_sel:
+                                df_filtrado = df_filtrado[df_filtrado["Modalidad"].isin(modalidad_sel)]
+                            if ciclo_sel:
+                                df_filtrado = df_filtrado[df_filtrado["Ciclo"].isin(ciclo_sel)]
+                            if cultivo_sel:
+                                df_filtrado = df_filtrado[df_filtrado["Cultivo"].isin(cultivo_sel)]
+
+                            # --- Agregar hoja al Excel ---
+                            ws = wb.create_sheet(title=file_name.replace(".csv", "")[:31])
+                            ws.append(list(df_filtrado.columns))
+                            for r in df_filtrado.itertuples(index=False):
+                                ws.append(list(r))
+
+                        except Exception as e:
+                            st.error(f"Error procesando {file_name}: {e}")
+
+                # --- Descargar Excel ---
+                output = BytesIO()
+                wb.save(output)
+                st.download_button(
+                    label="📥 Descargar Excel con hojas filtradas",
+                    data=output.getvalue(),
+                    file_name="filtrado_multiples_archivos.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 else:
     st.info("Sube un archivo ZIP para comenzar.")

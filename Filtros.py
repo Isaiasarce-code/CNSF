@@ -27,7 +27,7 @@ ciclo_sel = st.sidebar.selectbox(
 
 cultivo_sel = st.sidebar.selectbox(
     "Cultivo (opcional)",
-    ["", "Maíz", "Sorgo", "Caña", "Trigo", "Soja"]
+    ["", "Maíz", "Sorgo", "Caña", "Trigo", "Soja", "Ajo"]
 )
 
 st.sidebar.info("💡 Primero elige tus filtros, luego sube el ZIP para aplicar.")

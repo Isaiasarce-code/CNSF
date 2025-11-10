@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 import zipfile
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 from openpyxl import Workbook
 
-st.set_page_config(page_title="Filtro ZIP por etapas", layout="wide")
-st.title("📦 Filtro de múltiples CSV desde ZIP (Primero selecciona filtros)")
+st.set_page_config(page_title="Filtro ZIP de Parquet", layout="wide")
+st.title("📦 Filtro de múltiples PARQUET desde ZIP (Primero selecciona filtros)")
 
 # --- Paso 1: Seleccionar filtros antes de subir archivos ---
 st.sidebar.header("🎯 Selecciona los filtros antes de subir")
@@ -30,32 +30,31 @@ cultivo_sel = st.sidebar.selectbox(
     ["", "Maíz", "Sorgo", "Caña", "Trigo", "Soja", "Ajo"]
 )
 
-st.sidebar.info("💡 Primero elige tus filtros, luego sube el ZIP para aplicar.")
+st.sidebar.info("💡 Primero elige tus filtros, luego sube el ZIP con archivos PARQUET.")
 
 # --- Paso 2: Subir ZIP ---
-uploaded_zip = st.file_uploader("Sube un archivo ZIP con varios CSV", type=["zip"])
+uploaded_zip = st.file_uploader("Sube un archivo ZIP con varios PARQUET", type=["zip"])
 
 if not uploaded_zip:
     st.info("Sube tu archivo ZIP para aplicar los filtros seleccionados.")
     st.stop()
 
 # --- Paso 3: Procesar archivos uno por uno ---
-encoding_opcion = "latin1"
 wb = Workbook()
 wb.remove(wb.active)
 
 try:
     with zipfile.ZipFile(uploaded_zip) as z:
-        csv_files = [f for f in z.namelist() if f.endswith(".csv")]
-        if not csv_files:
-            st.error("El ZIP no contiene archivos CSV.")
+        parquet_files = [f for f in z.namelist() if f.endswith(".parquet")]
+        if not parquet_files:
+            st.error("El ZIP no contiene archivos PARQUET.")
             st.stop()
 
         procesados = 0
-        for file_name in csv_files:
+        for file_name in parquet_files:
             try:
                 with z.open(file_name) as f:
-                    df = pd.read_csv(TextIOWrapper(f, encoding=encoding_opcion))
+                    df = pd.read_parquet(f)
                     df.columns = df.columns.str.strip()
 
                     if not all(c in df.columns for c in ["Entidad", "Modalidad", "Ciclo", "Cultivo"]):
@@ -74,7 +73,7 @@ try:
                     if df.empty:
                         continue
 
-                    ws = wb.create_sheet(title=file_name.replace(".csv", "")[:31])
+                    ws = wb.create_sheet(title=file_name.replace(".parquet", "")[:31])
                     ws.append(list(df.columns))
                     for row in df.itertuples(index=False):
                         ws.append(row)
